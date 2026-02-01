@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mam_methods"
+version = "0.1.0"
+description = "Implementación de los algoritmos de Métodos Algorítmicos en Matemáticas"
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mam_methods*"]
