@@ -4,3 +4,6 @@
     Programarlo.
 
 - EN Mº Iterativo, poner args en función en vez de un dict options quizá.
+
+
+- Docs: https://realpython.com/python-project-documentation-with-mkdocs/#step-1-set-up-your-environment-for-building-documentation

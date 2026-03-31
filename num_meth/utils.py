@@ -23,9 +23,24 @@ def fEval(f, x_val):
     return RR(f).n()
 
 def pnorm(v: Union[vector, list, float], p: int) -> float:
-    """ Calcula la norma p del vector v con p un entero o infinito (oo) """
-    if(p == 0): 
-        raise ZeroDivisionError("La norma no puede ser negativa.")
+    """ Calculates de p-norm of a vector, list or float.
+
+    Examples:
+        >>> pnorm(vector(QQ, [1, 2, 3]), oo)
+        
+
+    Args:
+        v (vector | list | float): A vector, list or float from which calculate the norm.
+        p (int | oo): Number of p-norm.
+
+    Returns:
+        float: The norm.
+
+    Raises:
+        ValueError: If some argument is not valid.
+    """
+    if(p <= 0): 
+        raise ValueError("Invalid norm was given!")
     if type(v) == float:
         return abs(v)
     try:
@@ -36,8 +51,8 @@ def pnorm(v: Union[vector, list, float], p: int) -> float:
     if(p == oo): return max(abs(e) for e in list(v)) # type: ignore
     return sum(abs(e)**p for e in list(v))**(1/p) # type: ignore
 
-def spectral_radius(A: matrix):
-    return max([abs(e) for e in list(A.eigenvalues())])
+# def spectral_radius(A: matrix):
+#    return max([abs(e) for e in list(A.eigenvalues())])
 
 def extract_coefficients(p_input):
     if isinstance(p_input, list):
@@ -52,4 +67,4 @@ def extract_coefficients(p_input):
         coeffs.reverse()
         return coeffs
     except Exception as e:
-        raise ValueError(f"No se pudo procesar el polinomio: {e}")
+        raise ValueError(f"Couldn't process polynomial: {e}")

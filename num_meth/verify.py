@@ -1,4 +1,4 @@
-from sage.all import *
+from sage.all import matrix, vector
 from sage.structure.element import Matrix, Vector
 
 def nonNull(*args):

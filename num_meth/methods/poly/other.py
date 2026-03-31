@@ -1,8 +1,17 @@
+# num_meth/methods/poly/other.py
+
+"""Provides some other methods.
+
+- `descartes(p)` - Return the possible max number of real positive and negative roots.
+- `solveBairstow(p, u0, v0, tol, itMax, minIt)` - Applies bairstow method for deflacting polynomial using complex roots.
+- `graeffe(p, it)` - Finds all real roots using Graeffe method.
+
+"""
 from sage.all import *
 from ...utils import extract_coefficients
 from ..nolinsys.newton import newtonSystem
 from ..poly.eval import horner
-from .bound import reflejar_polinomio
+from .bound import reflex_polinomial
 from ...verify import nonNull
 
 def __sign_changes(lista) -> int:
@@ -13,9 +22,28 @@ def __sign_changes(lista) -> int:
                  if filtered[i] * filtered[i+1] < 0)
 
 def descartes(p: callable) -> tuple[int, int]:
+    """ Get's maximum possible real positive and negative roots by counting sign changes in coefficients.
+
+    Examples:
+        >>> p = 16*x**3 + 12*x**2 - 8*x - 1
+        >>> show(descartes(p))
+        
+
+    Args:
+        p (callable): a polynomial.
+        
+
+    Returns:
+        tuple:
+            - 0: maximum number of real positive roots.
+            - 1: maximum number of real negative roots.
+
+    Raises:
+        ValueError: If polynomial cannot be processed.
+    """ 
     nonNull(p)
     coeffs = [RR(c) for c in extract_coefficients(p)]
-    coeffs_reflejados = reflejar_polinomio(coeffs)
+    coeffs_reflejados = reflex_polinomial(coeffs)
     return (__sign_changes(coeffs), __sign_changes(coeffs_reflejados))
 
 
@@ -33,7 +61,35 @@ def __bairstow_residuals(params, coeffs):
 
     
     return vector([b[n], b[n-1]])
-def solveBairstow(p, u0: vector, v0: vector, tol: float = 1e-10, itMax: int = 100, minIt: int = 0) -> tuple[any, any, tuple[float, float]]:
+def solveBairstow(p, u0: float, v0: float, tol: float = 1e-10, itMax: int = 100, minIt: int = 0) -> tuple[any, any, tuple[float, float]]:
+    """ Searches for complex roots applying bairstow method for some initial x^2 - u0*x - v0
+
+    Examples:
+        >>> p = x**3 - x - 1
+        >>> solveBairstow(p, 1.1, 0.9, 1e-10)
+        
+
+    Args:
+        p (callable): a polynomial.
+        u0 (float): starting number of x^2 - u0*x - v0
+        v0 (float): starting number of x^2 - u0*x - v0
+        tol (Optional[float]): Maximum allowed tolerance. Default: 10^{-10}.
+        iMax (Optional[int]): Maximum iterations allowed. Default: 100.
+        minIt (Optional[int]): Minimum iterations. Default: 0.
+        
+
+    Returns:
+        tuple:
+            - 0: a complex root.
+            - 1: the other complex root (conjugated)
+            - 2: tuple:
+                - 0: Approximated coefficient u
+                - 1: Approximated coefficient v
+
+    Raises:
+        ValueError: If polynomial cannot be processed.
+        ConvergenceError: If divergence has been found.
+    """ 
     nonNull(p, u0, v0, tol, itMax, minIt)
     coeffs = [RR(c) for c in extract_coefficients(p)]
 
@@ -65,6 +121,24 @@ def __graeffeSeparate(coeffs: list) -> list:
     return new_coeffs
 
 def graeffe(p, it: int = 5) -> list:
+    """ Searches roots by separating and approximating them.
+
+    Examples:
+        >>> p = x**3 - 4*x**2 - 7*x + 10
+        >>> roots = graeffe(p, 5)
+        
+
+    Args:
+        p (callable): a polynomial.
+        it (int): number of iterations (= times roots will be separated)
+        
+
+    Returns:
+        list: list of all roots found this way.
+
+    Raises:
+        ValueError: If polynomial cannot be processed.
+    """ 
     nonNull(p, it)
     coeffs = [RR(c) for c in extract_coefficients(p)]
     n = len(coeffs) - 1

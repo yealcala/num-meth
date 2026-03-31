@@ -1,33 +1,52 @@
-from sage.all import *
+# num_meth/methods/linsys/gauss.py
+
+"""Provides the gauss method.
+
+The module contains the following functions:
+
+- `gaussian(A, b, method, tol)` - Applies gaussian method to linear system Au = b.
+"""
+
+from sage.all import matrix, vector, QQ
 from typing import Union
-from .remonte import remonteArriba
+from .remonte import upperBackSubs
 from ...verify import nonNull
 
-def gaussian(A: matrix, b: Union[vector, None], method: Union[str, None] = None, tol: Union[float, None] = None) -> tuple[matrix, vector]:
-    """Aplica el método de eliminación gaussiana sin pivotar para resolver el sistema Au = b
+def gaussian(A: matrix, b: Union[vector, None] = None, method: Union[str, None] = None, tol: Union[float, None] = None) -> tuple[matrix, vector]:
+    
+    """ Gaussian method for making A be upper triangular. If b is given, linear system is solve by this way.
 
-        Si el argumento "pause" se omite, por defecto será Verdad.
+    Examples:
+        >>> A = matrix(QQ, [[1, 1, 0, 0], [2, -1, 5, 0], [0, 3, -4, 2], [0, 0, 2, 6]])
+        >>> b = vector(QQ, [5, -9, 19, 2])
 
-        Parameters:
-        ----------
-        A : matrix
-            Una matriz invertible cuyas diagonales son no nulas.
-        b : vector
-            El término independiente del sistema.
-        method : str
-            none -: No hay pivotaje.
-            partial -: Pivotaje parcial.
-            scaled -: Pivotaje parcial escalado.
-            full -: Pivotaje total
-        steps : bool, optional
-            Si se debería o no mostrar cada paso por pantalla.
+        >>> try:
+        >>>    show("No pivot:", gaussian(A, b, method=None, tol=None))
+        >>>    show("Partial pivot:", gaussian(A, b, method="partial", tol=None))
+        >>>    show("Partial scaled pivot:", gaussian(A, None, method="scaled"))
+        >>>    show("Full pivot:", gaussian(A, b, method="full", tol=None))
+        >>> except ZeroDivisionError as e:
+        >>>     print(e)
+        
+    Args:
+        A (matrix): An invertible square n-matrix. 
+        b (Optional[vector]): A n-vector.
+        method (Optional[string]): How will pivots be taken:
+            - None (or other stuff): Without pivot. Default.
+            - "partial": Partial pivot.
+            - "scaled": Partial scaled pivot.
+            - "full": Full pivot..
+        tol (Optional[float]): Checks if given solution doesn't exceed this tolerance. Default: 10^{-10}
 
-        Raises:
-        ------
-        ZeroDivisionError
-            Si la matriz es singular en alguna columna.
-        ValueError
-            Si faltan los argumentos "A" o "b".
+    Returns:
+        tuple: A tuple with two components,
+            - 0 (matrix): The upper triangular matrix after applying gaussian method to A.
+            - 1 (vector): Linear system's solution. If b is None, then this is None.
+
+    Raises:
+        ValueError: If some argument is not valid.
+        ZeroDivisionError: If some non-evitable 0 appears as a pivot.
+        ResidualToleranceError: If real solution and calculated solution's difference exceeds tolerance.
     """
     nonNull(A)
 
@@ -103,7 +122,7 @@ def gaussian(A: matrix, b: Union[vector, None], method: Union[str, None] = None,
     if b is None:
         return (M.submatrix(0, 0, n, n), None)
 
-    u = remonteArriba(M.submatrix(0, 0, n, n), M.column(n), tol)
+    u = upperBackSubs(M.submatrix(0, 0, n, n), M.column(n), tol)
     
     if method == "full": # Undo permutations.
         u_final = [0]*n

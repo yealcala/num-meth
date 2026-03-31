@@ -1,8 +1,16 @@
-from sage.all import *
+# num_meth/methods/linsys/iterative.py
+
+"""Provides some of the iterative methods
+
+- `jacobiIteration(A, b, x0, tol, maxIt)` - Applies Jacobi iteration.
+- `gaussSeidelIteration(A, b, x0, { tolerance, max_iterations, norm })` - Applies relax iteration with w = 1.
+- `relaxIteration(A, b, x0, { tolerance, max_iterations, w, norm })` - Applies relax iteration calculating, if necessary, optimus w.
+"""
+from sage.all import matrix, QQ, vector, oo, show
 from typing import Optional
 from ...utils import pnorm
 from ...exceptions import ConvergenceError
-from .remonte import remonteAbajo
+from .remonte import lowerBackSubs
 from ...verify import nonNull, matrixMustBeSquare, matrixMustBeInvertible, matrixMustHaveNonNullDiagonal, vectorMustBeDimension
 
 def __DEF(A: matrix) -> tuple:
@@ -28,7 +36,7 @@ def __powerIteration(M: matrix, N: matrix, z0, tol: float = 1e-10, itMax: int = 
     k = 0
     error = tol + 1
     while error > tol and k < itMax:
-        y = remonteAbajo(M, N*z)
+        y = lowerBackSubs(M, N*z)
         zOld = z
 
         normaY = pnorm(y, norm)
@@ -52,6 +60,33 @@ def __powerIteration(M: matrix, N: matrix, z0, tol: float = 1e-10, itMax: int = 
     return (lOld, z, k)
 
 def jacobiIteration(A: matrix, b: vector, x0: Optional[vector] = None, tol: float = 1e-10, maxIt: int = 100) -> tuple[vector, float, int]:
+    """ Solves Au = b linear system by iterating over Mu^{k+1} = Nu^{k} + b with M and N the jacobi's one.
+
+    Examples:
+        >>> A = matrix(QQ, 4, [4, 0, 1, 1, 0, 4, 0, 1, 1, 0, 4, 0, 1, 1, 0, 4])
+        >>> b = vector(QQ, [1, 2, 3, 4])
+
+        >>> x0 = vector(QQ, [0]*4)
+        >>> show("Jacobi:", jacobiIteration(A, b, x0, 1e-10, maxIt=10))
+        
+
+    Args:
+        A (matrix): A square n-matrix which associated iterative method converges for this iteration.
+        b (vector): A n-vector.
+        x0 (Optional[vector]): Starting vector. If None, null vector is taken.
+        tol (Optional[float]): Maximum allowed tolerance. Default: 10^{-10}.
+        maxIt (Optional[int]): Maximum iterations allowed. Default: 100.
+
+    Returns:
+        tuple: A tuple with three components,
+            - 0: Approximation of the real solution.
+            - 1: Approxitated error.
+            - 2: Number of iterations needed.
+
+    Raises:
+        ValueError: If some argument is not valid.
+        ConvergenceError: If divergence is found for this iteration.
+    """
     nonNull(A, b, -1, tol, maxIt)
     matrixMustBeSquare(A)
     matrixMustBeInvertible(A)
@@ -74,7 +109,7 @@ def jacobiIteration(A: matrix, b: vector, x0: Optional[vector] = None, tol: floa
     k = 0
     error = tol + 1
     while error > tol and k < maxIt:
-        xNext = remonteAbajo(M, N*xCurr + b)
+        xNext = lowerBackSubs(M, N*xCurr + b)
         error = float(pnorm(xNext - xCurr, oo))
         xCurr = xNext
         k += 1
@@ -131,33 +166,45 @@ def __findBestw(D: matrix, E: matrix, F: matrix, n: int) -> float:
 _defaultOptions = {"tolerance": 1e-10, "max_iterations": 100, "w": None, "norm": oo}
 
 def gaussSeidelIteration(A: matrix, b: vector, x0: Optional[vector], opts: Optional[dict[str, any]] = _defaultOptions) -> tuple[vector, float, int, float]:
+    """
+    See `relaxIteration` as it applies that method with w = 1.
+    """
     if opts is None: opts = {"w": 1}
+    else: opts["w"] = 1
     return relaxIteration(A, b, x0, opts)
 
 
 def relaxIteration(A: matrix, b: vector, x0: Optional[vector], opts: Optional[dict[str, any]] = _defaultOptions) -> tuple[vector, float, int, float]:
-    """
-        Calcula iterativamente la solución del sistema lineal Ax = b mediante el Método de Sobrerelajación
-            calculando para ello, si fuera necesario, el valor óptimo de w.
-        
-        Precondiciones: El invocador debe asegurarse de que el método iterativo de sobrerelajación asociado a ese
-            sistema lineal sea convergente. Además, si hay alguna opción declarada en opts es incorrecta, el mal funcionamiento 
-            del programa es completamente responsabilidad del invocador.
-        
-        Parámetros:
-        - A (matrix): La matriz del sistema.
-        - b (vector): El vector del sistema.
-        - x0 (vector): El vector sobre el cual empezar a iterar. Default: Vector nulo.
-        - opts (dict): Opciones que se pueden añadir al método
-        -> tolerance (number): El error que estamos dispuestos a asumir. Default: 10e-10
-        -> max_iterations (number): El número máximo de iteraciones. Default: 200
-        -> w (number): El w a usar. Default: None (el óptimo es calculado)
-        -> norm (int | oo): La norma a usar. Default: oo (norma infinito).
+    """ Solves Au = b linear system by iterating over Mu^{k+1} = Nu^{k} + b with M and N the relax's one.
 
-        Return (vector): La solución aproximada al sistema usando los parámetros introducidos.
+    Examples:
+        >>> A = matrix(QQ, 4, [4, 0, 1, 1, 0, 4, 0, 1, 1, 0, 4, 0, 1, 1, 0, 4])
+        >>> b = vector(QQ, [1, 2, 3, 4])
 
-        Raises:
-        - ValueError: Si algun parámetro obligatorio es incorrecto.
+        >>> x0 = vector(QQ, [0]*4)
+        >>> show("Relax:", relaxIteration(A, b, x0, opts))
+        
+
+    Args:
+        A (matrix): A square n-matrix which associated iterative method converges for this iteration.
+        b (vector): A n-vector.
+        x0 (Optional[vector]): Starting vector. If None, null vector is taken.
+        opts (Optional[dict]): Options for this method.
+            tolerance (Optional[float]): Maximum allowed tolerance. Default: 10^{-10}.
+            max_iterations (Optional[int]): Maximum iterations allowed. Default: 100.
+            w (Optional[int]): w parameter's value. Default: None (optimum is calculated).
+            norm (Optional[int | oo]): Norm that will be used. Default: oo (infinity norm).
+
+    Returns:
+        tuple: A tuple with four components,
+            - 0 (vector): Approximation of the real solution.
+            - 1 (float): Approxitated error.
+            - 2 (int): Number of iterations needed.
+            - 3 (float): Used or calculated w value.
+
+    Raises:
+        ValueError: If some argument is not valid.
+        ConvergenceError: If divergence is found for this iteration.
     """
 
     # <----- Comprobaciones iniciales ----->
@@ -192,10 +239,9 @@ def relaxIteration(A: matrix, b: vector, x0: Optional[vector], opts: Optional[di
     M = (D/wopt - E)
     N = (F + (1-wopt)/wopt * D)
 
-    if wopt == 1: # Gauss-Seidel
-        rho, _, _ = __powerIteration(M, N, vector(D.base_ring(), [1]*A.ncols()), itMax=50)
-        if abs(rho) >= 1:
-            raise ConvergenceError("Gauss-Seidel or Relaxation method (w = 1) doesn't converge!")
+    rho, _, _ = __powerIteration(M, N, vector(D.base_ring(), [1]*A.ncols()), itMax=50)
+    if abs(rho) >= 1:
+        raise ConvergenceError("Gauss-Seidel or Relaxation method doesn't converge!")
     
         
 
@@ -205,7 +251,7 @@ def relaxIteration(A: matrix, b: vector, x0: Optional[vector], opts: Optional[di
     k = 0
     error = current_opts["tolerance"] + 1
     while error > current_opts["tolerance"] and k < current_opts["max_iterations"]:
-        xNext = remonteAbajo(M, N*xCurr + b)
+        xNext = lowerBackSubs(M, N*xCurr + b)
         error = pnorm(xNext - xCurr, current_opts["norm"])
         xCurr = xNext
         k += 1
